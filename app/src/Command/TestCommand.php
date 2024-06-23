@@ -4,87 +4,96 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\DTO\InputRowDto;
+use App\Exception\BinResultException;
+use App\Service\BinListService\BinListService;
+use App\Service\RateService\RateService;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Serializer\SerializerInterface;
+use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
-#[AsCommand(name: 'app:test', description: 'Hello PhpStorm')]
+#[AsCommand(name: 'app:test', description: 'Calculates something for exchange.')]
 class TestCommand extends Command
 {
+    public function __construct(
+        private SerializerInterface $serializer,
+        private BinListService $binListService,
+        private RateService $rateService
+    ) {
+        parent::__construct(null);
+    }
+
+    protected function configure()
+    {
+        $this
+            ->addOption('use-local-data', 'u', null, 'Use local data')
+            ->addOption('input-no-exception', 'i', null, 'Use data from input file where all bin numbers are relevant');
+        ;
+    }
+
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     * @return int
+     * @throws BinResultException
+     * @throws ClientExceptionInterface
+     * @throws RedirectionExceptionInterface
+     * @throws ServerExceptionInterface
+     * @throws TransportExceptionInterface
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        foreach (explode("\n", file_get_contents(__DIR__ . '/input.txt')) as $row) {
+        $useLocalData = (bool)$input->getOption('use-local-data');
+        $useInputNoException = (bool)$input->getOption('input-no-exception');
 
-            if (empty($row)) break;
-            dd(json_decode($row));
-            $p = explode(",",$row);
-            $p2 = explode(':', $p[0]);
-            $value[0] = trim($p2[1], '"');
-            $p2 = explode(':', $p[1]);
-            $value[1] = trim($p2[1], '"');
-            $p2 = explode(':', $p[2]);
-            $value[2] = trim($p2[1], '"}');
+        $inputData = explode("\n", file_get_contents(__DIR__ . '/input.txt'));
 
-            $binResults = file_get_contents(__DIR__ . '/binResults.json');
-            if (!$binResults)
-                die('error!');
-            $r = json_decode($binResults);
-            $isEu = $this->isEu($r->country->alpha2);
+        if ($useInputNoException) {
+            $inputData = explode("\n", file_get_contents(__DIR__ . '/input_noException.txt'));
+        }
 
-            $rate = @json_decode(file_get_contents(__DIR__ . '/rates.json'), true)['rates'][$value[2]];
-
-            if ($value[2] == 'EUR' or $rate == 0) {
-                $amntFixed = $value[1];
-            }
-            if ($value[2] != 'EUR' or $rate > 0) {
-                $amntFixed = $value[1] / $rate;
+        foreach ($inputData as $row) {
+            if (empty($row)) {
+                break;
             }
 
-            echo $amntFixed * ($isEu == 'yes' ? 0.01 : 0.02);
+            $inputRowObject = $this->serializer->deserialize($row, InputRowDto::class, 'json');
+
+            if ($useLocalData) {
+                $rate = $this->rateService->getRateForCurrencyFromLocalData($inputRowObject);
+            } else {
+                $rate = $this->rateService->getRateForCurrency($inputRowObject);
+            }
+
+            if ($inputRowObject->getCurrency() === 'EUR' or $rate == 0) {
+                $amntFixed = $inputRowObject->getAmount();
+            }
+            if ($inputRowObject->getCurrency() !== 'EUR' or $rate > 0) {
+                $amntFixed = $inputRowObject->getAmount() / $rate;
+            }
+
+            if ($useLocalData) {
+                $country = $this->binListService->getCountryFromBinListLocalData($inputRowObject);
+            } else {
+                $country = $this->binListService->getCountryFromBinList($inputRowObject);
+            }
+
+            echo $amntFixed * ($this->isEu($country) ? 0.01 : 0.02);
             print "\n";
         }
 
-
-        dump(123);
         return Command::SUCCESS;
     }
 
-    protected function isEu($c) {
-        $result = false;
-        switch($c) {
-            case 'AT':
-            case 'BE':
-            case 'BG':
-            case 'CY':
-            case 'CZ':
-            case 'DE':
-            case 'DK':
-            case 'EE':
-            case 'ES':
-            case 'FI':
-            case 'FR':
-            case 'GR':
-            case 'HR':
-            case 'HU':
-            case 'IE':
-            case 'IT':
-            case 'LT':
-            case 'LU':
-            case 'LV':
-            case 'MT':
-            case 'NL':
-            case 'PO':
-            case 'PT':
-            case 'RO':
-            case 'SE':
-            case 'SI':
-            case 'SK':
-                $result = 'yes';
-                return $result;
-            default:
-                $result = 'no';
-        }
-        return $result;
+    protected function isEu($country): bool
+    {
+        $euCountriesArr = ['AT', 'BE', 'BG', 'CY', 'CZ', 'DE', 'DK', 'EE', 'ES', 'FI', 'FR', 'GR', 'HR', 'HU', 'IE', 'IT', 'LT', 'LU', 'LV', 'MT', 'NL', 'PO', 'PT', 'RO', 'SE', 'SI', 'SK',];
+        return in_array($country, $euCountriesArr);
     }
 }

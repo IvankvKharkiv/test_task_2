@@ -4,26 +4,26 @@ namespace App\DTO;
 
 class InputRowDto
 {
-    private int $bin;
-    private float $amount;
+    private string $bin;
+    private string $amount;
     private string $currency;
 
-    public function getBin(): int
+    public function getBin(): string
     {
         return $this->bin;
     }
 
-    public function setBin(int $bin): void
+    public function setBin(string $bin): void
     {
         $this->bin = $bin;
     }
 
-    public function getAmount(): float
+    public function getAmount(): string
     {
         return $this->amount;
     }
 
-    public function setAmount(float $amount): void
+    public function setAmount(string $amount): void
     {
         $this->amount = $amount;
     }
@@ -37,5 +37,4 @@ class InputRowDto
     {
         $this->currency = $currency;
     }
-
 }
