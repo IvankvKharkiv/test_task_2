@@ -1,0 +1,25 @@
+version: "3.8"
+
+services: 
+    nginx:
+        build:
+            context: ./
+            dockerfile: docker/nginx.dockerfile
+            args:
+                - NGINX_HOST=${NGINX_HOST}
+        image: nginx
+        ports: 
+            - 80:80
+        links:
+            - fpm
+        volumes: 
+            - ./app:/var/www/${NGINX_HOST}
+
+    fpm:
+        build:
+            context: ./
+            dockerfile: docker/fpm.dockerfile
+            args:
+                - NGINX_HOST=${NGINX_HOST}
+        volumes: 
+            - ./app:/var/www/${NGINX_HOST}
