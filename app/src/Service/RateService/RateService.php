@@ -30,7 +30,7 @@ class RateService
     {
         $response = $this->httpClient->request(
             \Symfony\Component\HttpFoundation\Request::METHOD_GET,
-            sprintf('http://api.exchangeratesapi.io/v1/latest?access_key=%s&format=1', '0b9ab5147fa06aab3cdb30e89c5ffdfc'),
+            sprintf('http://api.exchangeratesapi.io/v1/latest?access_key=%s&format=1', '0b9ab5147fa06aab3cdb30e89c5ffdfc'), //this must be somewhere in the environment
         );
 
         if ($response->getStatusCode() !== 200) {

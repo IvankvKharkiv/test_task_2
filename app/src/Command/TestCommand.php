@@ -84,8 +84,7 @@ class TestCommand extends Command
                 $country = $this->binListService->getCountryFromBinList($inputRowObject);
             }
 
-            echo $amntFixed * ($this->isEu($country) ? 0.01 : 0.02);
-            print "\n";
+            $output->writeln((string)($amntFixed * ($this->isEu($country) ? 0.01 : 0.02)));
         }
 
         return Command::SUCCESS;

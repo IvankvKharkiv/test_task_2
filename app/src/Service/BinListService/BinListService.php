@@ -39,6 +39,10 @@ class BinListService
         $binList = file_get_contents(__DIR__ . sprintf('/binResults_%s.json', $inputRowObject->getBin()));
         $binList = json_decode($binList);
 
+        if (!isset($binList->country->alpha2)) {
+            throw new BinResultException('Could not get lookup info. Response does not contain alpha2');
+        }
+
         return $binList->country->alpha2;
     }
 
