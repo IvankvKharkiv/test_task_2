@@ -16,3 +16,4 @@ If you run command "bin/console app:test -u -i" then it will not only use locall
 So the command will run smoothly without errors.
 For http://api.exchangeratesapi.io I had to register my account. So you'll see my API key in code which is the wort practice, <br/>
 but I did not want to spend to much time to put it into environment.
+Original test task: https://gist.github.com/naymkazp/87112812d3e273083979f3e36035e1e9
